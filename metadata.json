@@ -1,0 +1,6 @@
+{
+  "name": "EduGenius AI",
+  "description": "Learn Easily, Grow Smartly. Next-Generation AI Learning Platform with AI Study Hub, Smart Quiz Engine, Live Tutor, and Student, Educator, and Admin Dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
