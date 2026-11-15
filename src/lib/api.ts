@@ -48,6 +48,16 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     credentials: 'include',
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    if (!res.ok) {
+      throw new Error(
+        'Backend API server is not reachable on this static host. Run the full-stack Node.js server (npm start) for live AI and database features.'
+      );
+    }
+    return {} as T;
+  }
+
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.error || `Request failed (${res.status})`);

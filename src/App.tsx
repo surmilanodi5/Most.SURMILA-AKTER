@@ -38,15 +38,115 @@ const DEFAULT_SETTINGS: SiteSettings = {
   },
 };
 
+const DEFAULT_COURSES: Course[] = [
+  {
+    id: 'course-hsc-physics-1',
+    title: 'HSC Physics: Mechanics, Waves & Optics Mastery',
+    subject: 'Physics',
+    educationLevel: 'Higher Secondary (HSC)',
+    description:
+      'Concept-first guide covering vectors, Newtonian mechanics, oscillations, and geometric optics aligned with the Bangladesh NCTB HSC syllabus.',
+    educatorId: 'system-curriculum',
+    educatorName: 'EduGenius Academic Board',
+    published: true,
+    enrolledUserIds: [],
+    materials: [],
+    createdAt: '',
+  },
+  {
+    id: 'course-ssc-math-1',
+    title: 'SSC Higher Mathematics & Trigonometry Bootcamp',
+    subject: 'Mathematics',
+    educationLevel: 'Secondary (SSC)',
+    description:
+      'Step-by-step problem solving for algebraic expressions, coordinate geometry, and trigonometric identities for Class 9-10 students.',
+    educatorId: 'system-curriculum',
+    educatorName: 'EduGenius Academic Board',
+    published: true,
+    enrolledUserIds: [],
+    materials: [],
+    createdAt: '',
+  },
+  {
+    id: 'course-hsc-ict-1',
+    title: 'HSC ICT: Number Systems, Logic Gates & C Programming',
+    subject: 'ICT',
+    educationLevel: 'Higher Secondary (HSC)',
+    description:
+      'Complete practical coverage of binary arithmetic, Boolean algebra simplification, HTML tables, and C programming loops.',
+    educatorId: 'system-curriculum',
+    educatorName: 'EduGenius Academic Board',
+    published: true,
+    enrolledUserIds: [],
+    materials: [],
+    createdAt: '',
+  },
+  {
+    id: 'course-admission-eng-1',
+    title: 'University Admission English & Analytical Writing',
+    subject: 'English',
+    educationLevel: 'Admission Preparation',
+    description:
+      'Targeted grammar drills, voice & narration transformations, vocabulary in context, and comprehension strategies for Dhaka University & GST admissions.',
+    educatorId: 'system-curriculum',
+    educatorName: 'EduGenius Academic Board',
+    published: true,
+    enrolledUserIds: [],
+    materials: [],
+    createdAt: '',
+  },
+];
+
+const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: 'ann-1',
+    title: 'Bilingual AI Study Hub & HSC/SSC Prep Live',
+    body: 'Generate structured explanations in both Bengali and English with instant PDF note export and Smart Quiz feedback.',
+    audience: 'ALL',
+    active: true,
+    createdAt: '',
+  },
+];
+
+const DEFAULT_TESTIMONIALS: Testimonial[] = [
+  {
+    id: 'test-1',
+    name: 'Tasnim Rahman',
+    role: 'HSC Science Candidate',
+    institution: 'Gaibandha Govt. College',
+    quote:
+      'Before using EduGenius AI, I struggled to connect Bengali textbook definitions with numerical physics problems. Asking the AI Study Hub in simple Bengali helped me raise my mock quiz accuracy from 64% to 91% in four weeks.',
+    outcome: '+27% Mock Quiz Accuracy in 4 Weeks',
+  },
+  {
+    id: 'test-2',
+    name: 'Mahmudul Hasan',
+    role: 'ICT Lecturer',
+    institution: 'Rangpur Model Academy',
+    quote:
+      'Creating topic-aligned MCQ sets used to take me three hours every weekend. With the Educator Studio, I draft balanced HSC ICT question banks and lesson plans in minutes and review every answer before publishing.',
+    outcome: '3 Hours Saved Weekly per Class Batch',
+  },
+  {
+    id: 'test-3',
+    name: 'Nusrat Jahan',
+    role: 'University Admission Aspirant',
+    institution: 'Dhaka Unit Preparation',
+    quote:
+      'The 24/7 Live Tutor never just gives away the answer—it walks me through English grammar rules step by step and highlights my weak areas after every 10-question timed quiz.',
+    outcome: 'Consistent 88%+ Score Across 18 Timed Quizzes',
+  },
+];
+
 export default function App() {
   const [page, setPage] = useState<AppPage>('home');
   const [bootstrapping, setBootstrapping] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [courses, setCourses] = useState<Course[]>(DEFAULT_COURSES);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(DEFAULT_ANNOUNCEMENTS);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
   const [models, setModels] = useState<AiModelInfo[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
@@ -74,15 +174,17 @@ export default function App() {
         models: AiModelInfo[];
         user: User | null;
       }>('/api/public/bootstrap');
-      setNeedsAdminSetup(data.needsAdminSetup);
-      setSiteSettings(data.siteSettings);
-      setCourses(data.courses);
-      setAnnouncements(data.announcements);
-      setTestimonials(data.testimonials);
-      setModels(data.models);
-      setUser(data.user);
+      if (data && data.siteSettings) {
+        setNeedsAdminSetup(Boolean(data.needsAdminSetup));
+        setSiteSettings(data.siteSettings);
+        if (Array.isArray(data.courses)) setCourses(data.courses);
+        if (Array.isArray(data.announcements)) setAnnouncements(data.announcements);
+        if (Array.isArray(data.testimonials)) setTestimonials(data.testimonials);
+        if (Array.isArray(data.models)) setModels(data.models);
+        setUser(data.user || null);
+      }
     } catch {
-      // keep defaults if transient error
+      // keep defaults if static host or transient error
     } finally {
       setBootstrapping(false);
     }
