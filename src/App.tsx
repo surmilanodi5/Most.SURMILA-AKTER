@@ -1,410 +1,142 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { apiRequest, setStoredToken } from './lib/api';
-import type {
-  AiModelInfo,
-  Announcement,
-  AppPage,
-  Course,
-  LeaderboardEntry,
-  SiteSettings,
-  Testimonial,
-  User,
-} from './types';
-import { Navbar } from './components/Navbar';
-import { LandingPage } from './components/LandingPage';
-import { StudyHub } from './components/StudyHub';
-import { SmartQuiz } from './components/SmartQuiz';
-import { LiveTutor } from './components/LiveTutor';
-import { StudentDashboard } from './components/StudentDashboard';
-import { EducatorDashboard } from './components/EducatorDashboard';
-import { AdminDashboard } from './components/AdminDashboard';
-import { AuthModal } from './components/AuthModal';
 
-const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: 'EduGenius AI',
-  tagline: 'Learn Easily, Grow Smartly.',
-  address: 'Gaibandha Circular Road, Gaibandha, Bangladesh.',
-  promoStats: {
-    questionsSolved: '50,000+',
-    quizzesCreated: '10,000+',
-    studentSatisfaction: '99.8%',
-    isSampleNotice: 'Sample promotional figures · Editable in Admin Panel',
-  },
-  aiConfig: {
-    defaultModel: 'gemini-4-hydrogen',
-    enabledModels: ['gemini-4-hydrogen', 'gemini-3.1-flash-lite'],
-    dailyLimitPerUser: 100,
-  },
-};
-
-const DEFAULT_COURSES: Course[] = [
-  {
-    id: 'course-hsc-physics-1',
-    title: 'HSC Physics: Mechanics, Waves & Optics Mastery',
-    subject: 'Physics',
-    educationLevel: 'Higher Secondary (HSC)',
-    description:
-      'Concept-first guide covering vectors, Newtonian mechanics, oscillations, and geometric optics aligned with the Bangladesh NCTB HSC syllabus.',
-    educatorId: 'system-curriculum',
-    educatorName: 'EduGenius Academic Board',
-    published: true,
-    enrolledUserIds: [],
-    materials: [],
-    createdAt: '',
-  },
-  {
-    id: 'course-ssc-math-1',
-    title: 'SSC Higher Mathematics & Trigonometry Bootcamp',
-    subject: 'Mathematics',
-    educationLevel: 'Secondary (SSC)',
-    description:
-      'Step-by-step problem solving for algebraic expressions, coordinate geometry, and trigonometric identities for Class 9-10 students.',
-    educatorId: 'system-curriculum',
-    educatorName: 'EduGenius Academic Board',
-    published: true,
-    enrolledUserIds: [],
-    materials: [],
-    createdAt: '',
-  },
-  {
-    id: 'course-hsc-ict-1',
-    title: 'HSC ICT: Number Systems, Logic Gates & C Programming',
-    subject: 'ICT',
-    educationLevel: 'Higher Secondary (HSC)',
-    description:
-      'Complete practical coverage of binary arithmetic, Boolean algebra simplification, HTML tables, and C programming loops.',
-    educatorId: 'system-curriculum',
-    educatorName: 'EduGenius Academic Board',
-    published: true,
-    enrolledUserIds: [],
-    materials: [],
-    createdAt: '',
-  },
-  {
-    id: 'course-admission-eng-1',
-    title: 'University Admission English & Analytical Writing',
-    subject: 'English',
-    educationLevel: 'Admission Preparation',
-    description:
-      'Targeted grammar drills, voice & narration transformations, vocabulary in context, and comprehension strategies for Dhaka University & GST admissions.',
-    educatorId: 'system-curriculum',
-    educatorName: 'EduGenius Academic Board',
-    published: true,
-    enrolledUserIds: [],
-    materials: [],
-    createdAt: '',
-  },
+const skills = [
+  { name: 'SEO', icon: '🔍', description: 'Search Engine Optimization and website growth.' },
+  { name: 'Digital Marketing', icon: '📈', description: 'Digital strategies to grow businesses online.' },
+  { name: 'AI Tools', icon: '🤖', description: 'Using AI tools to create smarter workflows.' },
 ];
 
-const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'ann-1',
-    title: 'Bilingual AI Study Hub & HSC/SSC Prep Live',
-    body: 'Generate structured explanations in both Bengali and English with instant PDF note export and Smart Quiz feedback.',
-    audience: 'ALL',
-    active: true,
-    createdAt: '',
-  },
-];
-
-const DEFAULT_TESTIMONIALS: Testimonial[] = [
-  {
-    id: 'test-1',
-    name: 'Tasnim Rahman',
-    role: 'HSC Science Candidate',
-    institution: 'Gaibandha Govt. College',
-    quote:
-      'Before using EduGenius AI, I struggled to connect Bengali textbook definitions with numerical physics problems. Asking the AI Study Hub in simple Bengali helped me raise my mock quiz accuracy from 64% to 91% in four weeks.',
-    outcome: '+27% Mock Quiz Accuracy in 4 Weeks',
-  },
-  {
-    id: 'test-2',
-    name: 'Mahmudul Hasan',
-    role: 'ICT Lecturer',
-    institution: 'Rangpur Model Academy',
-    quote:
-      'Creating topic-aligned MCQ sets used to take me three hours every weekend. With the Educator Studio, I draft balanced HSC ICT question banks and lesson plans in minutes and review every answer before publishing.',
-    outcome: '3 Hours Saved Weekly per Class Batch',
-  },
-  {
-    id: 'test-3',
-    name: 'Nusrat Jahan',
-    role: 'University Admission Aspirant',
-    institution: 'Dhaka Unit Preparation',
-    quote:
-      'The 24/7 Live Tutor never just gives away the answer—it walks me through English grammar rules step by step and highlights my weak areas after every 10-question timed quiz.',
-    outcome: 'Consistent 88%+ Score Across 18 Timed Quizzes',
-  },
+const services = [
+  { number: '01', title: 'SEO Optimization', description: 'Helping websites improve their search visibility and reach the right audience.' },
+  { number: '02', title: 'Digital Marketing', description: 'Creating digital marketing strategies that help brands grow online.' },
+  { number: '03', title: 'AI Solutions', description: 'Using modern AI tools to make everyday digital work easier and faster.' },
 ];
 
 export default function App() {
-  const [page, setPage] = useState<AppPage>('home');
-  const [bootstrapping, setBootstrapping] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [needsAdminSetup, setNeedsAdminSetup] = useState(false);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
-  const [courses, setCourses] = useState<Course[]>(DEFAULT_COURSES);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(DEFAULT_ANNOUNCEMENTS);
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(DEFAULT_TESTIMONIALS);
-  const [models, setModels] = useState<AiModelInfo[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-
-  // Auth Modal state
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authTab, setAuthTab] = useState<'login' | 'register' | 'forgot' | 'admin-setup'>('login');
-  const [verificationCode, setVerificationCode] = useState<string | undefined>(undefined);
-
-  // Hero Quick Ask state
-  const [quickQuestion, setQuickQuestion] = useState('');
-  const [quickSubject, setQuickSubject] = useState('Science');
-  const [quickAnswer, setQuickAnswer] = useState('');
-  const [quickLoading, setQuickLoading] = useState(false);
-  const [quickError, setQuickError] = useState('');
-  const [pendingQuickAsk, setPendingQuickAsk] = useState(false);
-
-  const loadBootstrap = useCallback(async () => {
-    try {
-      const data = await apiRequest<{
-        needsAdminSetup: boolean;
-        siteSettings: SiteSettings;
-        courses: Course[];
-        announcements: Announcement[];
-        testimonials: Testimonial[];
-        models: AiModelInfo[];
-        user: User | null;
-      }>('/api/public/bootstrap');
-      if (data && data.siteSettings) {
-        setNeedsAdminSetup(Boolean(data.needsAdminSetup));
-        setSiteSettings(data.siteSettings);
-        if (Array.isArray(data.courses)) setCourses(data.courses);
-        if (Array.isArray(data.announcements)) setAnnouncements(data.announcements);
-        if (Array.isArray(data.testimonials)) setTestimonials(data.testimonials);
-        if (Array.isArray(data.models)) setModels(data.models);
-        setUser(data.user || null);
-      }
-    } catch {
-      // keep defaults if static host or transient error
-    } finally {
-      setBootstrapping(false);
-    }
-  }, []);
-
-  const loadLeaderboard = useCallback(async () => {
-    try {
-      const lb = await apiRequest<{ entries: LeaderboardEntry[] }>('/api/leaderboard');
-      setLeaderboard(lb.entries);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadBootstrap();
-    void loadLeaderboard();
-  }, [loadBootstrap, loadLeaderboard]);
-
-  const executeQuickAsk = useCallback(async (q: string, subj: string) => {
-    if (!q.trim()) {
-      setQuickError('Please enter a question to ask EduGenius AI.');
-      return;
-    }
-    setQuickError('');
-    setQuickLoading(true);
-    try {
-      const res = await apiRequest<{ answer: string }>('/api/ai/quick-ask', {
-        method: 'POST',
-        body: JSON.stringify({ question: q.trim(), subject: subj }),
-      });
-      setQuickAnswer(res.answer);
-    } catch (err) {
-      setQuickError(err instanceof Error ? err.message : 'Unable to answer right now.');
-    } finally {
-      setQuickLoading(false);
-    }
-  }, []);
-
-  const handleHeroQuickAsk = () => {
-    if (!quickQuestion.trim()) {
-      setQuickError('Please enter a question to ask EduGenius AI.');
-      return;
-    }
-    if (!user) {
-      setPendingQuickAsk(true);
-      setAuthTab('login');
-      setAuthOpen(true);
-      return;
-    }
-    void executeQuickAsk(quickQuestion, quickSubject);
-  };
-
-  const handleNavigate = (target: AppPage, hash?: string) => {
-    // Enforce protected dashboard access
-    if (target === 'dashboard' && !user) {
-      setAuthTab('login');
-      setAuthOpen(true);
-      return;
-    }
-    if (target === 'educator') {
-      if (!user) {
-        setAuthTab('login');
-        setAuthOpen(true);
-        return;
-      }
-      if (!['EDUCATOR', 'ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
-        setPage('dashboard');
-        return;
-      }
-    }
-    if (target === 'admin') {
-      if (!user) {
-        setAuthTab('login');
-        setAuthOpen(true);
-        return;
-      }
-      if (!['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
-        setPage(user.role === 'EDUCATOR' ? 'educator' : 'dashboard');
-        return;
-      }
-    }
-
-    setPage(target);
-    if (hash) {
-      setTimeout(() => {
-        const el = document.querySelector(hash);
-        el?.scrollIntoView({ behavior: 'smooth' });
-      }, 60);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleOpenAuth = (tab: 'login' | 'register' = 'login') => {
-    setAuthTab(tab);
-    setAuthOpen(true);
-  };
-
-  const handleAuthenticated = (authedUser: User, previewCode?: string) => {
-    setUser(authedUser);
-    setVerificationCode(previewCode);
-    setAuthOpen(false);
-    setNeedsAdminSetup(false);
-    void loadBootstrap();
-
-    if (pendingQuickAsk && quickQuestion.trim()) {
-      setPendingQuickAsk(false);
-      void executeQuickAsk(quickQuestion, quickSubject);
-      return;
-    }
-
-    if (page === 'home') {
-      if (authedUser.role === 'ADMIN' || authedUser.role === 'SUPER_ADMIN') {
-        setPage('admin');
-      } else if (authedUser.role === 'EDUCATOR') {
-        setPage('educator');
-      } else {
-        setPage('dashboard');
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
-    } catch {
-      // ignore
-    }
-    setStoredToken(null);
-    setUser(null);
-    setQuickAnswer('');
-    setPage('home');
-  };
-
-  if (bootstrapping) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center gap-2.5 text-sm font-semibold text-[#1E1B4B]">
-        <Loader2 className="w-5 h-5 animate-spin text-[#4338CA]" />
-        <span>Loading EduGenius AI...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#1E1B4B]">
-      <Navbar
-        currentPage={page}
-        user={user}
-        onNavigate={handleNavigate}
-        onOpenAuth={handleOpenAuth}
-        onLogout={handleLogout}
-      />
+    <main className="min-h-screen bg-[#080d1b] text-white">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#080d1b]/90 backdrop-blur-lg">
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
+          <a href="#home" className="text-2xl font-black tracking-tight">
+            Surmila<span className="text-violet-400">.</span>
+          </a>
+          <div className="flex flex-wrap gap-5 text-sm text-slate-300">
+            <a href="#home" className="hover:text-violet-400">Home</a>
+            <a href="#about" className="hover:text-violet-400">About</a>
+            <a href="#skills" className="hover:text-violet-400">Skills</a>
+            <a href="#services" className="hover:text-violet-400">Services</a>
+            <a href="#contact" className="hover:text-violet-400">Contact</a>
+          </div>
+        </nav>
+      </header>
 
-      <div className="flex-1">
-        {page === 'home' && (
-          <LandingPage
-            user={user}
-            siteSettings={siteSettings}
-            courses={courses}
-            announcements={announcements}
-            testimonials={testimonials}
-            leaderboard={leaderboard}
-            quickQuestion={quickQuestion}
-            quickSubject={quickSubject}
-            quickAnswer={quickAnswer}
-            quickLoading={quickLoading}
-            quickError={quickError}
-            onQuickQuestionChange={setQuickQuestion}
-            onQuickSubjectChange={setQuickSubject}
-            onSubmitQuickAsk={handleHeroQuickAsk}
-            onNavigate={handleNavigate}
-            onOpenAuth={handleOpenAuth}
-          />
-        )}
+      <section id="home" className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-24 md:grid-cols-2 md:py-36">
+        <div>
+          <p className="mb-5 font-semibold tracking-[0.25em] text-violet-400">HELLO, WELCOME TO MY PORTFOLIO</p>
+          <h1 className="text-5xl font-black leading-tight md:text-7xl">
+            Hi, I'm <span className="text-violet-400">Surmila Akter</span>
+          </h1>
+          <h2 className="mt-5 text-2xl font-semibold text-slate-200">
+            Digital Marketer & AI Specialist
+          </h2>
+          <p className="mt-6 max-w-lg leading-8 text-slate-400">
+            I help businesses grow online through SEO, digital marketing and
+            smart AI tools. I love learning new technologies and creating
+            meaningful digital solutions.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-4">
+            <a href="#contact" className="rounded-full bg-violet-600 px-7 py-3 font-bold transition hover:bg-violet-500">
+              Contact Me →
+            </a>
+            <a href="#about" className="rounded-full border border-white/20 px-7 py-3 font-bold transition hover:border-violet-400">
+              About Me
+            </a>
+          </div>
+        </div>
 
-        {page === 'study-hub' && (
-          <StudyHub user={user} onRequireAuth={() => handleOpenAuth('login')} />
-        )}
+        <div className="flex justify-center">
+          <div className="flex h-72 w-72 items-center justify-center rounded-full border border-violet-400/40 bg-gradient-to-br from-violet-600/30 to-cyan-400/10 shadow-2xl shadow-violet-900/40 md:h-96 md:w-96">
+            <div className="text-center">
+              <div className="text-8xl">👩‍💻</div>
+              <p className="mt-5 text-xl font-bold">Surmila Akter</p>
+              <p className="mt-1 text-sm text-violet-300">Digital Creator</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {page === 'smart-quiz' && (
-          <SmartQuiz user={user} onRequireAuth={() => handleOpenAuth('login')} />
-        )}
+      <section id="about" className="border-y border-white/10 bg-white/[0.03] px-6 py-24">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="font-semibold tracking-widest text-violet-400">GET TO KNOW ME</p>
+          <h2 className="mt-4 text-4xl font-black">About Me</h2>
+          <p className="mt-8 text-lg leading-9 text-slate-300">
+            Hello! I'm Surmila Akter, a passionate Digital Marketer and AI
+            Specialist. I have 6 months of experience in SEO and Digital
+            Marketing. I enjoy exploring AI tools, learning new skills and
+            helping businesses build a stronger online presence.
+          </p>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-[#111a2e] p-7">
+              <p className="text-4xl font-black text-violet-400">06+</p>
+              <p className="mt-2 text-slate-300">Months of Experience</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-[#111a2e] p-7">
+              <p className="text-4xl font-black text-violet-400">03</p>
+              <p className="mt-2 text-slate-300">Core Skill Areas</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {page === 'live-tutor' && (
-          <LiveTutor user={user} onRequireAuth={() => handleOpenAuth('login')} />
-        )}
+      <section id="skills" className="mx-auto max-w-6xl px-6 py-24">
+        <div className="text-center">
+          <p className="font-semibold tracking-widest text-violet-400">WHAT I KNOW</p>
+          <h2 className="mt-4 text-4xl font-black">My Skills</h2>
+        </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {skills.map((skill) => (
+            <div key={skill.name} className="rounded-2xl border border-white/10 bg-[#111a2e] p-8 transition hover:-translate-y-2 hover:border-violet-400/60">
+              <div className="text-4xl">{skill.icon}</div>
+              <h3 className="mt-5 text-xl font-bold">{skill.name}</h3>
+              <p className="mt-3 leading-7 text-slate-400">{skill.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        {page === 'dashboard' && user && (
-          <StudentDashboard
-            user={user}
-            models={models}
-            verificationPreviewCode={verificationCode}
-            onUserUpdated={setUser}
-            onNavigate={handleNavigate}
-            onLogout={handleLogout}
-          />
-        )}
+      <section id="services" className="border-y border-white/10 bg-white/[0.03] px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="text-center">
+            <p className="font-semibold tracking-widest text-violet-400">HOW I CAN HELP</p>
+            <h2 className="mt-4 text-4xl font-black">What I Do</h2>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {services.map((service) => (
+              <div key={service.number} className="rounded-2xl border border-white/10 bg-[#111a2e] p-8">
+                <p className="text-3xl font-black text-violet-400">{service.number}</p>
+                <h3 className="mt-6 text-xl font-bold">{service.title}</h3>
+                <p className="mt-4 leading-7 text-slate-400">{service.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {page === 'educator' && user && ['EDUCATOR', 'ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
-          <EducatorDashboard user={user} />
-        )}
+      <section id="contact" className="mx-auto max-w-4xl px-6 py-24 text-center">
+        <p className="font-semibold tracking-widest text-violet-400">LET'S CONNECT</p>
+        <h2 className="mt-4 text-4xl font-black">Have a Project in Mind?</h2>
+        <p className="mx-auto mt-5 max-w-xl leading-8 text-slate-400">
+          I'd love to hear about your ideas and discuss how we can work together.
+          Feel free to send me an email.
+        </p>
+        <a href="mailto:surmilanodi5@gmail.com" className="mt-9 inline-block rounded-full bg-violet-600 px-8 py-4 font-bold transition hover:bg-violet-500">
+          ✉ surmilanodi5@gmail.com
+        </a>
+      </section>
 
-        {page === 'admin' && user && ['ADMIN', 'SUPER_ADMIN'].includes(user.role) && (
-          <AdminDashboard user={user} onSettingsUpdated={setSiteSettings} />
-        )}
-      </div>
-
-      {authOpen && (
-        <AuthModal
-          open={authOpen}
-          initialTab={authTab}
-          needsAdminSetup={needsAdminSetup}
-          onClose={() => {
-            setAuthOpen(false);
-            setPendingQuickAsk(false);
-          }}
-          onAuthenticated={handleAuthenticated}
-        />
-      )}
-    </div>
+      <footer className="border-t border-white/10 px-6 py-8 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} Surmila Akter. All rights reserved.
+      </footer>
+    </main>
   );
 }
+
